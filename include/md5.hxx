@@ -9,7 +9,6 @@
 namespace HashBlazer {
 class MD5_Hasher {
    public:
-
     constexpr static size_t HASH_SIZE_BYTES = 16;
     constexpr static size_t PROCESS_BLOCK_SIZE_BYTES = 64;
 
@@ -22,7 +21,6 @@ class MD5_Hasher {
     void reset();
 
    private:
-
     void process_block(const uint8_t* data);
 
     std::array<uint8_t, PROCESS_BLOCK_SIZE_BYTES> incompleteBlockBuffer_;

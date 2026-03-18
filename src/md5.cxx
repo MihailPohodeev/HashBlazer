@@ -1,8 +1,7 @@
-#include <cstring>
-#include <concepts>
-
 #include "md5.hxx"
 
+#include <concepts>
+#include <cstring>
 
 namespace HashBlazer {
 namespace {
@@ -46,8 +45,8 @@ template <class Func>
              std::same_as<
                  std::invoke_result_t<Func, uint32_t, uint32_t, uint32_t>,
                  uint32_t>
-void round_step(Func func, uint32_t& a, uint32_t b, uint32_t c, uint32_t d, uint32_t M_i,
-                int i) {
+void round_step(Func func, uint32_t& a, uint32_t b, uint32_t c, uint32_t d,
+                uint32_t M_i, int i) {
     a = b + rotate_left(a + func(b, c, d) + M_i + K_ARRAY[i], MD5_S[i]);
 }
 
@@ -64,14 +63,14 @@ void MD5_Hasher::reset() {
     sizeOfProcessedBlocks_ = 0;
 }
 
-void MD5_Hasher::update(std::span<const uint8_t> data)
-{
+void MD5_Hasher::update(std::span<const uint8_t> data) {
     size_t dataSize = data.size();
     size_t offset = 0;
-    if (bufferOffset_ != 0)
-    {
-        size_t additionalSize = std::min(dataSize, PROCESS_BLOCK_SIZE_BYTES - bufferOffset_);
-        std::memcpy(incompleteBlockBuffer_.data() + bufferOffset_, data.data(), additionalSize);
+    if (bufferOffset_ != 0) {
+        size_t additionalSize =
+            std::min(dataSize, PROCESS_BLOCK_SIZE_BYTES - bufferOffset_);
+        std::memcpy(incompleteBlockBuffer_.data() + bufferOffset_, data.data(),
+                    additionalSize);
         bufferOffset_ = 0;
         dataSize -= additionalSize;
         offset = additionalSize;
@@ -79,16 +78,48 @@ void MD5_Hasher::update(std::span<const uint8_t> data)
     }
     size_t fullBlocksCount = dataSize / PROCESS_BLOCK_SIZE_BYTES;
     size_t incompleteBytes = dataSize % PROCESS_BLOCK_SIZE_BYTES;
-    std::memcpy(incompleteBlockBuffer_.data(), data.data() + data.size() - incompleteBytes, incompleteBytes);
+    std::memcpy(incompleteBlockBuffer_.data(),
+                data.data() + data.size() - incompleteBytes, incompleteBytes);
     bufferOffset_ = incompleteBytes;
 
     for (size_t i = 0; i < fullBlocksCount; ++i)
         process_block(&data[offset + PROCESS_BLOCK_SIZE_BYTES * i]);
 }
 
-std::vector<uint8_t> MD5_Hasher::finish()
-{
+std::vector<uint8_t> MD5_Hasher::finish() {
+    size_t sizeInBits =
+        (sizeOfProcessedBlocks_ * PROCESS_BLOCK_SIZE_BYTES + bufferOffset_) * 8;
+    incompleteBlockBuffer_[bufferOffset_++] = 0x80;
+    size_t remainingSize = PROCESS_BLOCK_SIZE_BYTES - bufferOffset_;
+    if (remainingSize < 8) {
+        while (bufferOffset_ < PROCESS_BLOCK_SIZE_BYTES)
+            incompleteBlockBuffer_[bufferOffset_++] = 0;
 
+        process_block(incompleteBlockBuffer_.data());
+        bufferOffset_ = 0;
+
+        while (bufferOffset_ < PROCESS_BLOCK_SIZE_BYTES - 8)
+            incompleteBlockBuffer_[bufferOffset_++] = 0;
+    } else {
+        while (bufferOffset_ < PROCESS_BLOCK_SIZE_BYTES - 8)
+            incompleteBlockBuffer_[bufferOffset_++] = 0;
+    }
+
+    for (int i = 0; i < 8; ++i)
+        incompleteBlockBuffer_[bufferOffset_++] =
+            static_cast<uint8_t>(sizeInBits >> (i * 8));
+    process_block(incompleteBlockBuffer_.data());
+
+    std::vector<uint8_t> result(16);
+    for (int i = 0; i < 4; ++i) {
+        result[i] = (A_ >> (i * 8)) & 0xFF;
+        result[i + 4] = (B_ >> (i * 8)) & 0xFF;
+        result[i + 8] = (C_ >> (i * 8)) & 0xFF;
+        result[i + 12] = (D_ >> (i * 8)) & 0xFF;
+    }
+
+    reset();
+    return result;
 }
 
 void MD5_Hasher::process_block(const uint8_t* data) {
