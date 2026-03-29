@@ -65,6 +65,7 @@ int main_impl(int argc, char** argv) {
   //===========================================================================================
   //                                    HANDLE ARGUMENTS
   //===========================================================================================
+
   // clang-format off
   cxxopts::Options options{argv[0],
                            "Print or check " HASH_ALGO_NAME " " HASH_ALGO_SIZE " checksums."};

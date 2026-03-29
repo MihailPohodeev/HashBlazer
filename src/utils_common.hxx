@@ -38,7 +38,9 @@ std::string calculateHashSumForFile(const std::filesystem::path& filepath,
   return result;
 }
 
-bool is_flag(std::string_view arg) { return !arg.empty() && arg[0] == '-'; }
+inline bool is_flag(std::string_view arg) {
+  return !arg.empty() && arg[0] == '-';
+}
 
 }  // namespace HashBlazer
 
