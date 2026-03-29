@@ -4,13 +4,14 @@
 #include <cstring>
 
 namespace HashBlazer {
+
 namespace {
 inline uint32_t F(uint32_t x, uint32_t y, uint32_t z) {
-    return (x & y) | (~x & z);
+  return (x & y) | (~x & z);
 }
 
 inline uint32_t G(uint32_t x, uint32_t y, uint32_t z) {
-    return (x & z) | (~z & y);
+  return (x & z) | (~z & y);
 }
 
 inline uint32_t H(uint32_t x, uint32_t y, uint32_t z) { return x ^ y ^ z; }
@@ -18,7 +19,7 @@ inline uint32_t H(uint32_t x, uint32_t y, uint32_t z) { return x ^ y ^ z; }
 inline uint32_t I(uint32_t x, uint32_t y, uint32_t z) { return y ^ (x | ~z); }
 
 inline uint32_t rotate_left(uint32_t word, int32_t n) {
-    return (word << n) | (word >> (32 - n));
+  return (word << n) | (word >> (32 - n));
 }
 
 constexpr uint32_t K_ARRAY[64] = {
@@ -41,191 +42,190 @@ constexpr uint32_t MD5_S[] = {
     6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21};
 
 template <class Func>
-    requires std::invocable<Func, uint32_t, uint32_t, uint32_t> &&
-             std::same_as<
-                 std::invoke_result_t<Func, uint32_t, uint32_t, uint32_t>,
-                 uint32_t>
-void round_step(Func func, uint32_t& a, uint32_t b, uint32_t c, uint32_t d,
-                uint32_t M_i, int i) {
-    a = b + rotate_left(a + func(b, c, d) + M_i + K_ARRAY[i], MD5_S[i]);
+  requires std::invocable<Func, uint32_t, uint32_t, uint32_t> &&
+           std::same_as<
+               std::invoke_result_t<Func, uint32_t, uint32_t, uint32_t>,
+               uint32_t>
+inline void round_step(Func func, uint32_t &a, uint32_t b, uint32_t c,
+                       uint32_t d, uint32_t M_i, int i) {
+  a = b + rotate_left(a + func(b, c, d) + M_i + K_ARRAY[i], MD5_S[i]);
 }
+
+#define ROUND_STEP(func, a, b, c, d, M_I, I) \
+  a = b + rotate_left(a + func(b, c, d) + M_I + K_ARRAY[I], MD5_S[I])
 
 }  // namespace
 
 MD5_Hasher::MD5_Hasher() { reset(); }
 
 void MD5_Hasher::reset() {
-    A_ = 0x67452301;
-    B_ = 0xefcdab89;
-    C_ = 0x98badcfe;
-    D_ = 0x10325476;
-    bufferOffset_ = 0;
-    sizeOfProcessedBlocks_ = 0;
+  A_ = 0x67452301;
+  B_ = 0xefcdab89;
+  C_ = 0x98badcfe;
+  D_ = 0x10325476;
+  bufferOffset_ = 0;
+  sizeOfProcessedBlocks_ = 0;
 }
 
 void MD5_Hasher::update(std::span<const uint8_t> data) {
-    size_t dataSize = data.size();
-    size_t offset = 0;
-    if (bufferOffset_ != 0) {
-        size_t additionalSize =
-            std::min(dataSize, PROCESS_BLOCK_SIZE_BYTES - bufferOffset_);
-        std::memcpy(incompleteBlockBuffer_.data() + bufferOffset_, data.data(),
-                    additionalSize);
-        bufferOffset_ = 0;
-        dataSize -= additionalSize;
-        offset = additionalSize;
-        process_block(incompleteBlockBuffer_.data());
-    }
-    size_t fullBlocksCount = dataSize / PROCESS_BLOCK_SIZE_BYTES;
-    size_t incompleteBytes = dataSize % PROCESS_BLOCK_SIZE_BYTES;
-    std::memcpy(incompleteBlockBuffer_.data(),
-                data.data() + data.size() - incompleteBytes, incompleteBytes);
-    bufferOffset_ = incompleteBytes;
+  size_t dataSize = data.size();
+  size_t offset = 0;
+  if (bufferOffset_ != 0) {
+    size_t additionalSize =
+        std::min(dataSize, PROCESS_BLOCK_SIZE_BYTES - bufferOffset_);
+    std::memcpy(incompleteBlockBuffer_.data() + bufferOffset_, data.data(),
+                additionalSize);
+    bufferOffset_ = 0;
+    dataSize -= additionalSize;
+    offset = additionalSize;
+    process_block(incompleteBlockBuffer_.data());
+  }
+  size_t fullBlocksCount = dataSize / PROCESS_BLOCK_SIZE_BYTES;
+  size_t incompleteBytes = dataSize % PROCESS_BLOCK_SIZE_BYTES;
+  std::memcpy(incompleteBlockBuffer_.data(),
+              data.data() + data.size() - incompleteBytes, incompleteBytes);
+  bufferOffset_ = incompleteBytes;
 
-    for (size_t i = 0; i < fullBlocksCount; ++i)
-        process_block(&data[offset + PROCESS_BLOCK_SIZE_BYTES * i]);
+  for (size_t i = 0; i < fullBlocksCount; ++i)
+    process_block(&data[offset + PROCESS_BLOCK_SIZE_BYTES * i]);
 }
 
 std::vector<uint8_t> MD5_Hasher::finish() {
-    size_t sizeInBits =
-        (sizeOfProcessedBlocks_ * PROCESS_BLOCK_SIZE_BYTES + bufferOffset_) * 8;
-    incompleteBlockBuffer_[bufferOffset_++] = 0x80;
-    size_t remainingSize = PROCESS_BLOCK_SIZE_BYTES - bufferOffset_;
-    if (remainingSize < 8) {
-        while (bufferOffset_ < PROCESS_BLOCK_SIZE_BYTES)
-            incompleteBlockBuffer_[bufferOffset_++] = 0;
+  size_t sizeInBits =
+      (sizeOfProcessedBlocks_ * PROCESS_BLOCK_SIZE_BYTES + bufferOffset_) * 8;
+  incompleteBlockBuffer_[bufferOffset_++] = 0x80;
+  size_t remainingSize = PROCESS_BLOCK_SIZE_BYTES - bufferOffset_;
+  if (remainingSize < 8) {
+    while (bufferOffset_ < PROCESS_BLOCK_SIZE_BYTES)
+      incompleteBlockBuffer_[bufferOffset_++] = 0;
 
-        process_block(incompleteBlockBuffer_.data());
-        bufferOffset_ = 0;
-
-        while (bufferOffset_ < PROCESS_BLOCK_SIZE_BYTES - 8)
-            incompleteBlockBuffer_[bufferOffset_++] = 0;
-    } else {
-        while (bufferOffset_ < PROCESS_BLOCK_SIZE_BYTES - 8)
-            incompleteBlockBuffer_[bufferOffset_++] = 0;
-    }
-
-    for (int i = 0; i < 8; ++i)
-        incompleteBlockBuffer_[bufferOffset_++] =
-            static_cast<uint8_t>(sizeInBits >> (i * 8));
     process_block(incompleteBlockBuffer_.data());
+    bufferOffset_ = 0;
 
-    std::vector<uint8_t> result(16);
-    for (int i = 0; i < 4; ++i) {
-        result[i] = (A_ >> (i * 8)) & 0xFF;
-        result[i + 4] = (B_ >> (i * 8)) & 0xFF;
-        result[i + 8] = (C_ >> (i * 8)) & 0xFF;
-        result[i + 12] = (D_ >> (i * 8)) & 0xFF;
-    }
+    while (bufferOffset_ < PROCESS_BLOCK_SIZE_BYTES - 8)
+      incompleteBlockBuffer_[bufferOffset_++] = 0;
+  } else {
+    while (bufferOffset_ < PROCESS_BLOCK_SIZE_BYTES - 8)
+      incompleteBlockBuffer_[bufferOffset_++] = 0;
+  }
 
-    reset();
-    return result;
+  for (int i = 0; i < 8; ++i)
+    incompleteBlockBuffer_[bufferOffset_++] =
+        static_cast<uint8_t>(sizeInBits >> (i * 8));
+  process_block(incompleteBlockBuffer_.data());
+
+  std::vector<uint8_t> result(16);
+  for (int i = 0; i < 4; ++i) {
+    result[i] = (A_ >> (i * 8)) & 0xFF;
+    result[i + 4] = (B_ >> (i * 8)) & 0xFF;
+    result[i + 8] = (C_ >> (i * 8)) & 0xFF;
+    result[i + 12] = (D_ >> (i * 8)) & 0xFF;
+  }
+
+  reset();
+  return result;
 }
 
-void MD5_Hasher::process_block(const uint8_t* data) {
-    uint32_t A = A_;
-    uint32_t B = B_;
-    uint32_t C = C_;
-    uint32_t D = D_;
+__attribute__((always_inline)) void MD5_Hasher::process_block(
+    const uint8_t *data) {
+  uint32_t A = A_;
+  uint32_t B = B_;
+  uint32_t C = C_;
+  uint32_t D = D_;
 
-    uint32_t M[16];
-    for (size_t i = 0; i < 16; ++i) {
-        M[i] = static_cast<uint32_t>(data[i * 4]) |
-               (static_cast<uint32_t>(data[i * 4 + 1]) << 8) |
-               (static_cast<uint32_t>(data[i * 4 + 2]) << 16) |
-               (static_cast<uint32_t>(data[i * 4 + 3]) << 24);
-    }
+  alignas(16) uint32_t M[16];
+  std::memcpy(M, data, PROCESS_BLOCK_SIZE_BYTES);
 
-    // round 1.
-    round_step(F, A, B, C, D, M[0], 0);
-    round_step(F, D, A, B, C, M[1], 1);
-    round_step(F, C, D, A, B, M[2], 2);
-    round_step(F, B, C, D, A, M[3], 3);
+  // round 1.
+  ROUND_STEP(F, A, B, C, D, M[0], 0);
+  ROUND_STEP(F, D, A, B, C, M[1], 1);
+  ROUND_STEP(F, C, D, A, B, M[2], 2);
+  ROUND_STEP(F, B, C, D, A, M[3], 3);
 
-    round_step(F, A, B, C, D, M[4], 4);
-    round_step(F, D, A, B, C, M[5], 5);
-    round_step(F, C, D, A, B, M[6], 6);
-    round_step(F, B, C, D, A, M[7], 7);
+  ROUND_STEP(F, A, B, C, D, M[4], 4);
+  ROUND_STEP(F, D, A, B, C, M[5], 5);
+  ROUND_STEP(F, C, D, A, B, M[6], 6);
+  ROUND_STEP(F, B, C, D, A, M[7], 7);
 
-    round_step(F, A, B, C, D, M[8], 8);
-    round_step(F, D, A, B, C, M[9], 9);
-    round_step(F, C, D, A, B, M[10], 10);
-    round_step(F, B, C, D, A, M[11], 11);
+  ROUND_STEP(F, A, B, C, D, M[8], 8);
+  ROUND_STEP(F, D, A, B, C, M[9], 9);
+  ROUND_STEP(F, C, D, A, B, M[10], 10);
+  ROUND_STEP(F, B, C, D, A, M[11], 11);
 
-    round_step(F, A, B, C, D, M[12], 12);
-    round_step(F, D, A, B, C, M[13], 13);
-    round_step(F, C, D, A, B, M[14], 14);
-    round_step(F, B, C, D, A, M[15], 15);
+  ROUND_STEP(F, A, B, C, D, M[12], 12);
+  ROUND_STEP(F, D, A, B, C, M[13], 13);
+  ROUND_STEP(F, C, D, A, B, M[14], 14);
+  ROUND_STEP(F, B, C, D, A, M[15], 15);
 
-    // round 2.
-    round_step(G, A, B, C, D, M[1], 16);
-    round_step(G, D, A, B, C, M[6], 17);
-    round_step(G, C, D, A, B, M[11], 18);
-    round_step(G, B, C, D, A, M[0], 19);
+  // round 2.
+  ROUND_STEP(G, A, B, C, D, M[1], 16);
+  ROUND_STEP(G, D, A, B, C, M[6], 17);
+  ROUND_STEP(G, C, D, A, B, M[11], 18);
+  ROUND_STEP(G, B, C, D, A, M[0], 19);
 
-    round_step(G, A, B, C, D, M[5], 20);
-    round_step(G, D, A, B, C, M[10], 21);
-    round_step(G, C, D, A, B, M[15], 22);
-    round_step(G, B, C, D, A, M[4], 23);
+  ROUND_STEP(G, A, B, C, D, M[5], 20);
+  ROUND_STEP(G, D, A, B, C, M[10], 21);
+  ROUND_STEP(G, C, D, A, B, M[15], 22);
+  ROUND_STEP(G, B, C, D, A, M[4], 23);
 
-    round_step(G, A, B, C, D, M[9], 24);
-    round_step(G, D, A, B, C, M[14], 25);
-    round_step(G, C, D, A, B, M[3], 26);
-    round_step(G, B, C, D, A, M[8], 27);
+  ROUND_STEP(G, A, B, C, D, M[9], 24);
+  ROUND_STEP(G, D, A, B, C, M[14], 25);
+  ROUND_STEP(G, C, D, A, B, M[3], 26);
+  ROUND_STEP(G, B, C, D, A, M[8], 27);
 
-    round_step(G, A, B, C, D, M[13], 28);
-    round_step(G, D, A, B, C, M[2], 29);
-    round_step(G, C, D, A, B, M[7], 30);
-    round_step(G, B, C, D, A, M[12], 31);
+  ROUND_STEP(G, A, B, C, D, M[13], 28);
+  ROUND_STEP(G, D, A, B, C, M[2], 29);
+  ROUND_STEP(G, C, D, A, B, M[7], 30);
+  ROUND_STEP(G, B, C, D, A, M[12], 31);
 
-    // round 3.
-    round_step(H, A, B, C, D, M[5], 32);
-    round_step(H, D, A, B, C, M[8], 33);
-    round_step(H, C, D, A, B, M[11], 34);
-    round_step(H, B, C, D, A, M[14], 35);
+  // round 3.
+  ROUND_STEP(H, A, B, C, D, M[5], 32);
+  ROUND_STEP(H, D, A, B, C, M[8], 33);
+  ROUND_STEP(H, C, D, A, B, M[11], 34);
+  ROUND_STEP(H, B, C, D, A, M[14], 35);
 
-    round_step(H, A, B, C, D, M[1], 36);
-    round_step(H, D, A, B, C, M[4], 37);
-    round_step(H, C, D, A, B, M[7], 38);
-    round_step(H, B, C, D, A, M[10], 39);
+  ROUND_STEP(H, A, B, C, D, M[1], 36);
+  ROUND_STEP(H, D, A, B, C, M[4], 37);
+  ROUND_STEP(H, C, D, A, B, M[7], 38);
+  ROUND_STEP(H, B, C, D, A, M[10], 39);
 
-    round_step(H, A, B, C, D, M[13], 40);
-    round_step(H, D, A, B, C, M[0], 41);
-    round_step(H, C, D, A, B, M[3], 42);
-    round_step(H, B, C, D, A, M[6], 43);
+  ROUND_STEP(H, A, B, C, D, M[13], 40);
+  ROUND_STEP(H, D, A, B, C, M[0], 41);
+  ROUND_STEP(H, C, D, A, B, M[3], 42);
+  ROUND_STEP(H, B, C, D, A, M[6], 43);
 
-    round_step(H, A, B, C, D, M[9], 44);
-    round_step(H, D, A, B, C, M[12], 45);
-    round_step(H, C, D, A, B, M[15], 46);
-    round_step(H, B, C, D, A, M[2], 47);
+  ROUND_STEP(H, A, B, C, D, M[9], 44);
+  ROUND_STEP(H, D, A, B, C, M[12], 45);
+  ROUND_STEP(H, C, D, A, B, M[15], 46);
+  ROUND_STEP(H, B, C, D, A, M[2], 47);
 
-    // round 4.
-    round_step(I, A, B, C, D, M[0], 48);
-    round_step(I, D, A, B, C, M[7], 49);
-    round_step(I, C, D, A, B, M[14], 50);
-    round_step(I, B, C, D, A, M[5], 51);
+  // round 4.
+  ROUND_STEP(I, A, B, C, D, M[0], 48);
+  ROUND_STEP(I, D, A, B, C, M[7], 49);
+  ROUND_STEP(I, C, D, A, B, M[14], 50);
+  ROUND_STEP(I, B, C, D, A, M[5], 51);
 
-    round_step(I, A, B, C, D, M[12], 52);
-    round_step(I, D, A, B, C, M[3], 53);
-    round_step(I, C, D, A, B, M[10], 54);
-    round_step(I, B, C, D, A, M[1], 55);
+  ROUND_STEP(I, A, B, C, D, M[12], 52);
+  ROUND_STEP(I, D, A, B, C, M[3], 53);
+  ROUND_STEP(I, C, D, A, B, M[10], 54);
+  ROUND_STEP(I, B, C, D, A, M[1], 55);
 
-    round_step(I, A, B, C, D, M[8], 56);
-    round_step(I, D, A, B, C, M[15], 57);
-    round_step(I, C, D, A, B, M[6], 58);
-    round_step(I, B, C, D, A, M[13], 59);
+  ROUND_STEP(I, A, B, C, D, M[8], 56);
+  ROUND_STEP(I, D, A, B, C, M[15], 57);
+  ROUND_STEP(I, C, D, A, B, M[6], 58);
+  ROUND_STEP(I, B, C, D, A, M[13], 59);
 
-    round_step(I, A, B, C, D, M[4], 60);
-    round_step(I, D, A, B, C, M[11], 61);
-    round_step(I, C, D, A, B, M[2], 62);
-    round_step(I, B, C, D, A, M[9], 63);
+  ROUND_STEP(I, A, B, C, D, M[4], 60);
+  ROUND_STEP(I, D, A, B, C, M[11], 61);
+  ROUND_STEP(I, C, D, A, B, M[2], 62);
+  ROUND_STEP(I, B, C, D, A, M[9], 63);
 
-    A_ += A;
-    B_ += B;
-    C_ += C;
-    D_ += D;
+  A_ += A;
+  B_ += B;
+  C_ += C;
+  D_ += D;
 
-    ++sizeOfProcessedBlocks_;
+  ++sizeOfProcessedBlocks_;
 }
 
 }  // namespace HashBlazer

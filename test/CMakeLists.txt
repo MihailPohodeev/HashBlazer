@@ -4,7 +4,7 @@ add_executable(md5_test
     test_md5.cxx
 )
 target_link_libraries(md5_test PRIVATE
-    ${PROJECT_NAME}
+    hashblazer
     GTest::gtest
     GTest::gtest_main
 )
@@ -14,7 +14,7 @@ add_executable(base_test
     test_base.cxx
 )
 target_link_libraries(base_test PRIVATE
-    ${PROJECT_NAME}
+    hashblazer
     GTest::gtest
     GTest::gtest_main
 )
