@@ -126,7 +126,7 @@ std::vector<uint8_t> MD5_Hasher::finish() {
   return result;
 }
 
-__attribute__((always_inline)) void MD5_Hasher::process_block(
+void MD5_Hasher::process_block(
     const uint8_t *data) {
   uint32_t A = A_;
   uint32_t B = B_;

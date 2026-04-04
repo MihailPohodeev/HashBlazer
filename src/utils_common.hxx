@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "base.hxx"
-#include "double_buffer.hxx"
 
 namespace HashBlazer {
 
@@ -39,9 +38,9 @@ std::string calculateHashSumForFile(const std::filesystem::path& filepath,
   std::vector<uint8_t>* buf1 = &buffer_1;
   std::vector<uint8_t>* buf2 = &buffer_2;
 
-  std::barrier sync_barrier(2, [&buf1, &buf2]() { std::swap(buf1, buf2); });
+  std::barrier sync_barrier(2, [&buf1, &buf2]() noexcept { std::swap(buf1, buf2); });
 
-  auto read_func = [&sync_barrier, &file, &buf1, &buf2]() {
+  auto read_func = [&sync_barrier, &file, &buf1, &buf2]() noexcept {
     bool is_last_block{false};
     while (true) {
       sync_barrier.arrive_and_wait();
@@ -60,7 +59,7 @@ std::string calculateHashSumForFile(const std::filesystem::path& filepath,
     }
   };
 
-  auto func_hash_calc = [&sync_barrier, &file, &buf1, &buf2]() {
+  auto func_hash_calc = [&sync_barrier, &file, &buf1, &buf2]() noexcept {
     HasherType hasher;
     while (true) {
       sync_barrier.arrive_and_wait();

@@ -171,7 +171,7 @@ std::vector<uint8_t> SHA384_Hasher::finish() {
   return result;
 }
 
-__attribute__((always_inline)) void SHA384_Hasher::process_block(
+void SHA384_Hasher::process_block(
     const uint8_t* data) {
   uint64_t w[80];
 

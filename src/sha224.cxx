@@ -149,7 +149,7 @@ std::vector<uint8_t> SHA224_Hasher::finish() {
   return result;
 }
 
-__attribute__((always_inline)) void SHA224_Hasher::process_block(
+void SHA224_Hasher::process_block(
     const uint8_t* data) {
   uint32_t w[64];
 

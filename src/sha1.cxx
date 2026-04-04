@@ -170,7 +170,7 @@ inline uint32_t load_be32(const uint8_t* p) {
 
 }  // namespace
 
-__attribute__((always_inline)) void SHA1_Hasher::process_block(
+void SHA1_Hasher::process_block(
     const uint8_t* data) {
   uint32_t w[80];
   uint32_t a = h0_, b = h1_, c = h2_, d = h3_, e = h4_;
