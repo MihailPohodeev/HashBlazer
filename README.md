@@ -22,7 +22,7 @@ $ cmake .. -DBUILD_HASHSUM_UTILS=OFF
 $ cmake --build . --parallel $(nproc)
 ```
 #### Build library + utilities
-To build the library along with hash utilities (md5sum, sha1sum, etc.) :
+To build the library along with hash utilities (md5sum, sha1sum, etc.), make sure that the cxxopts library is installed on your system:
 ```bash
 $ cd <project-root-directory>
 $ mkdir build && cd build

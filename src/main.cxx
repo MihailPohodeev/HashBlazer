@@ -1,13 +1,12 @@
 #include <cstdio>
+#include <cxxopts.hpp>
+#include <format>
 #include <fstream>
 #include <iostream>
 #include <vector>
 
 #include "base.hxx"
-#include "cxxopts.hpp"
-#include "utils_common.hxx"
-
-#ifdef BUILD_MD5SUM_APP
+#if defined(BUILD_MD5SUM_APP)
 
 #include "md5.hxx"
 using HasherType = HashBlazer::MD5_Hasher;
@@ -28,7 +27,7 @@ using HasherType = HashBlazer::SHA224_Hasher;
 #define HASH_ALGO_NAME "SHA224"
 #define HASH_ALGO_SIZE "(224-bit)"
 
-#elif defined(BUILD_SHA256_APP)
+#elif defined(BUILD_SHA256SUM_APP)
 
 #include "sha256.hxx"
 using HasherType = HashBlazer::SHA256_Hasher;
@@ -57,9 +56,9 @@ using HasherType = HashBlazer::SHA512_Hasher;
 #error "HASH_BLAZER_VERSION marco shoud be specified."
 #endif
 
-namespace fs = std::filesystem;
+#include "utils_common.hxx"
 
-constexpr size_t BUFFER_SIZE = 1'024 * 1'024 * 2;
+namespace fs = std::filesystem;
 
 int main_impl(int argc, char** argv) {
   //===========================================================================================
@@ -125,22 +124,36 @@ int main_impl(int argc, char** argv) {
   //                                    PROCESS DATA
   //===========================================================================================
 
-  std::stringstream output;
-  for (const auto& file : files) {
-    auto result_hash =
-        HashBlazer::calculateHashSumForFile<HasherType>(file, mode);
+  if (cmd_args_parsing_result.count("check"))
+    std::ignore;
+  else
+    HashBlazer::calculateAndPrintHashSumForFiles<HasherType>(files, mode,
+                                                             is_tag_output);
 
+#if 0
+  for (size_t i = 0; i < hash_futures_with_result.size(); ++i) {
+    std::string result_hash;
+
+    try {
+      result_hash = hash_futures_with_result[i].get();
+    } catch (const std::exception& error) {
+      std::cerr << argv[0] << ": " << error.what() << std::endl;
+      continue;
+    }
+
+    std::string result_string;
     if (is_tag_output)
-      output << HASH_ALGO_NAME << " (" << file.string() << ") = " << result_hash
-             << std::endl;
+      result_string = std::format("{} ({}) = {}", HASH_ALGO_NAME,
+                                  files[i].string(), result_hash);
     else
-      output << result_hash
-             << (mode == HashBlazer::HashingMode::BINARY ? " *" : "  ")
-             << file.string() << std::endl;
+      result_string =
+          std::format("{}{}{}", result_hash,
+                      (mode == HashBlazer::HashingMode::BINARY ? " *" : "  "),
+                      files[i].string());
+
+    std::cout << result_string << std::endl;
   }
-
-  std::cout << output.str();
-
+#endif
   return 0;
 }
 
